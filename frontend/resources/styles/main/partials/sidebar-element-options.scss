@@ -1532,3 +1532,12 @@
     margin-right: $size-2;
   }
 }
+
+.expand-colors {
+  cursor: pointer;
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: $color-gray-20;
+    stroke: $color-gray-20;  }
+}
