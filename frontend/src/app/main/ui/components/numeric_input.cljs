@@ -167,7 +167,10 @@
         (mf/use-callback
          (mf/deps set-delta)
          (fn [event]
-           (set-delta event (< (.-deltaY event) 0) (> (.-deltaY event) 0))))
+           (let [numeric-input (mf/ref-val local-ref)
+                 active (dom/get-active)]
+             (when (= numeric-input active)
+               (set-delta event (< (.-deltaY event) 0) (> (.-deltaY event) 0))))))
 
         handle-blur
         (mf/use-callback
