@@ -167,10 +167,12 @@
         (mf/use-callback
          (mf/deps set-delta)
          (fn [event]
-           (let [numeric-input (mf/ref-val local-ref)
-                 active (dom/get-active)]
-             (when (= numeric-input active)
-               (set-delta event (< (.-deltaY event) 0) (> (.-deltaY event) 0))))))
+           (let [input-node (mf/ref-val ref)]
+             (when (dom/active? input-node)
+               (let [event (.getBrowserEvent ^js event)]
+                 (dom/prevent-default event)
+                 (dom/stop-propagation event)
+                 (set-delta event (< (.-deltaY event) 0) (> (.-deltaY event) 0)))))))
 
         handle-blur
         (mf/use-callback
@@ -198,7 +200,6 @@
                   (obj/set! "ref" ref)
                   (obj/set! "defaultValue" value-str)
                   (obj/set! "title" title)
-                  (obj/set! "onWheel" handle-mouse-wheel)
                   (obj/set! "onKeyDown" handle-key-down)
                   (obj/set! "onBlur" handle-blur))]
 
@@ -226,6 +227,14 @@
                    (events/listen globals/window EventType.CLICK on-click)]]
          #(doseq [key keys]
             (events/unlistenByKey key)))))
+    
+    (mf/use-layout-effect
+     (mf/deps handle-mouse-wheel)
+     (fn []
+       (let [keys [(events/listen (mf/ref-val ref) EventType.WHEEL handle-mouse-wheel #js {:pasive false})]]
+         #(doseq [key keys]
+            (events/unlistenByKey key)))))
+
 
     [:> :input props]))
 
