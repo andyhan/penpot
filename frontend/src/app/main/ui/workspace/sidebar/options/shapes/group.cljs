@@ -55,7 +55,7 @@
 
      (when (< 2 (count objects))
        [:& color-selection-menu {:type type
-                                 :values (vals objects)}])
+                                 :shapes (vals objects)}])
 
      (when-not (empty? shadow-ids)
        [:& shadow-menu {:type type :ids shadow-ids :values shadow-values}])

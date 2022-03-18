@@ -9,10 +9,12 @@
    [app.common.attrs :as attrs]
    [app.common.colors :as clr]
    [app.common.data :as d]
+   [app.common.data.macros :as dm]
    [app.common.pages :as cp]
    [app.common.pages.common :as cpc]
    [app.common.text :as txt]
    [app.main.data.workspace.colors :as dc]
+   [app.main.data.workspace.common :as dwc]
    [app.main.store :as st]
    [app.main.ui.hooks :as h]
    [app.main.ui.icons :as i]
@@ -21,77 +23,139 @@
    [app.util.i18n :as i18n :refer [tr]]
    [rumext.alpha :as mf]))
 
-(defn fill->color
+(defn fill->color-att
   [fill]
-  {:color (:fill-color fill)
-   :opacity (:fill-opacity fill)
-   :id (:fill-color-ref-id fill)
-   :file-id (:fill-color-ref-file fill)
-   :gradient (:fill-color-gradient fill)})
+  {:color-prop {:color (:fill-color fill)
+                :opacity (:fill-opacity fill)
+                :id (:fill-color-ref-id fill)
+                :file-id (:fill-color-ref-file fill)
+                :gradient (:fill-color-gradient fill)}
+   :prop :fill
+   :shape-id (:shape-id fill)
+   :index (:index fill)})
 
-(defn stroke->color
+(defn stroke->color-att
   [stroke]
-  {:color (:stroke-color stroke)
-   :opacity (:stroke-opacity stroke)
-   :id (:stroke-color-ref-id stroke)
-   :file-id (:stroke-color-ref-file stroke)
-   :gradient (:stroke-color-gradient stroke)})
+  {:color-prop {:color (:stroke-color stroke)
+                :opacity (:stroke-opacity stroke)
+                :id (:stroke-color-ref-id stroke)
+                :file-id (:stroke-color-ref-file stroke)
+                :gradient (:stroke-color-gradient stroke)}
+   :prop :stroke
+   :shape-id (:shape-id stroke)
+   :index (:index stroke)})
 
-(defn get-colors-shape
-  [colors shape]
-  (if (= :text (:type shape))
-    (as-> colors $
-      (into $ (map stroke->color) (:strokes shape))
-      (reduce get-colors-shape $ (txt/node-seq txt/is-text-node? (:content shape))))
 
-    (-> colors
-        (into (map fill->color) (:fills shape))
-        (into (map stroke->color) (:strokes shape)))))
+(defn text->color-att
+  [fill]
+  {:color-prop {:color (:fill-color fill)
+                :opacity (:fill-opacity fill)
+                :id (:fill-color-ref-id fill)
+                :file-id (:fill-color-ref-file fill)
+                :gradient (:fill-color-gradient fill)}
+   :prop :content
+   :shape-id (:parent-id fill)
+   :index (:index fill)})
 
-(defn get-colors-shapes
+(defn get-colors-and-props-shape
+  [list shape]
+  (let [fill-obj   (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:fills shape))
+        ;; (if (= :text (:type shape))
+        ;;              (map-indexed (fn[el1 el2] assoc el2 :index el1)(map  #(assoc % :shape-id (:id shape))(txt/node-seq txt/is-text-node? (:content shape))))
+        ;;              (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:fills shape)))
+        stroke-obj (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:strokes shape))
+        ;; text-obj (map #(assoc % :parent-id (:id shape) :type :node) (txt/node-seq txt/is-text-node? (:content shape)))
+        ;; text-fill-obj (reduce (fn [element] map-indexed #(assoc %2 :shape-id (:parent-id element) :index %1) (:fills element)) text-obj)
+        
+        ]
+    (if (= :text (:type shape))
+      ;; (as-> list $
+      ;;   (into $ (map stroke->color-att) stroke-obj)
+      ;;   (reduce get-colors-and-props-shape $ fill-obj))
+      list
+
+      (-> list
+          (into (map fill->color-att)  fill-obj)
+          (into (map stroke->color-att) stroke-obj)))))
+
+(defn get-colors-and-props-shapes
   [shapes]
-  (reduce get-colors-shape #{} shapes))
+  (let [data (reduce get-colors-and-props-shape [] shapes)]
+    (group-by :color-prop data)))
+
 
 (mf/defc color-selection-menu
-  {::mf/wrap [#(mf/memo' % (mf/check-props ["ids" "values"]))]}
-  [{:keys [type values] :as props}]
-  (let [colors (get-colors-shapes values)
+  {::mf/wrap [#(mf/memo' % (mf/check-props ["shapes"]))]}
+  [{:keys [type shapes] :as props}]
+  (let [grouped-colors (get-colors-and-props-shapes shapes)
+        colors (keys grouped-colors)
         divided-colors (group-by #(some? (:id %)) colors)
         library-colors (get divided-colors true)
         not-library-colors (get divided-colors false)
         expand-lib-color (mf/use-state false)
         expand-color (mf/use-state false)
-        on-detach "eyyyyyyyy"]
+        on-change (mf/use-callback
+                   (mf/deps grouped-colors)
+                   (fn [event color]
+                     (let [new-color event
+                           shapes-by-color (get grouped-colors color)]
+                       (st/emit! (dc/change-color-in-selected new-color shapes-by-color)))))
+        on-detach (mf/use-callback
+                   (mf/deps grouped-colors)
+                   (fn [color]
+                     (let [shapes-by-color (get grouped-colors color)
+                           color (-> color
+                                     (assoc :id nil :file-id nil))]
+                       (st/emit! (dc/change-color-in-selected color shapes-by-color)))))
+        select-only (mf/use-callback
+                     (mf/deps grouped-colors)
+                     (fn [color]
+                       (let [shapes-by-color (get grouped-colors color)
+                             ids (into (d/ordered-set)  (map :shape-id shapes-by-color))]
+                         (st/emit! (dwc/select-shapes ids)))))]
     (when (< 1 (count colors))
       [:div.element-set
        [:div.element-set-title
         [:span (tr "workspace.options.selection-color")]]
        [:div.element-set-content
-        [:div
+        [:div.selected-colors
          [:*
-          (for [color (take 3 library-colors)]
-            [:& color-row {:color color
-                           :index color
-                           :on-detach on-detach}])
+          (for [[index color] (d/enumerate (take 3 library-colors))]
+            [:& color-row {:key (dm/str "color-" index)
+                           :color color
+                           :index index
+                           :on-detach on-detach
+                           :select-only select-only
+                           :on-change #(on-change % color)}])
           (when (and (false? @expand-lib-color) (< 3 (count library-colors)))
             [:div.expand-colors  {:on-click #(reset! expand-lib-color true)}
-             i/actions (tr "workspace.options.more-lib-colors")])
+             [:span i/actions]
+             [:span.text (tr "workspace.options.more-lib-colors")]])
           (when @expand-lib-color
-            (for [color (drop 3 library-colors)]
-              [:& color-row {:color color
-                             :index color
-                             :on-detach on-detach}]))]]
+            (for [[index color] (d/enumerate (drop 3 library-colors))]
+              [:& color-row {:key (dm/str "color-" index)
+                             :color color
+                             :index index
+                             :on-detach on-detach
+                             :select-only select-only
+                             :on-change #(on-change % color)}]))]]
 
-        [:div
+        [:div.selected-colors
          [:*
-          (for [color (take 3 not-library-colors)]
-            [:& color-row {:color color
-                           :index color}])
+          (for [[index color] (d/enumerate (take 3 not-library-colors))]
+            [:& color-row {:key (dm/str "color-" index)
+                           :color color
+                           :index index
+                           :select-only select-only
+                           :on-change #(on-change % color)}])
           (when (and (false? @expand-color) (< 3 (count not-library-colors)))
             [:div.expand-colors  {:on-click #(reset! expand-color true)}
-             [:span ]
-             i/actions (tr "workspace.options.more-colors")])
+             [:span i/actions]
+             [:span.text (tr "workspace.options.more-colors")]])
           (when @expand-color
-            (for [color (drop 3 not-library-colors)]
-              [:& color-row {:color color
-                             :index color}]))]]]])))
+            (for [[index color] (d/enumerate (drop 3 not-library-colors))]
+              [:& color-row {:key (dm/str "color-" index)
+                             :color color
+                             :index index
+                             :select-only select-only
+                             :on-change #(on-change % color)}]))]]]])))

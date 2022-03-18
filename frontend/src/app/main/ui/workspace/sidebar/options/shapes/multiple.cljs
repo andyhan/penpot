@@ -268,7 +268,7 @@
        [:& stroke-menu {:type type :ids stroke-ids :show-caps show-caps :values stroke-values}])
      
      (when-not (empty? shapes)
-       [:& color-selection-menu {:type type :values (vals objects-no-measures)}])
+       [:& color-selection-menu {:type type :shapes (vals objects-no-measures)}])
 
      (when-not (empty? shadow-ids)
        [:& shadow-menu {:type type :ids shadow-ids :values shadow-values}])

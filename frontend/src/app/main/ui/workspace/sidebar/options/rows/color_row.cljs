@@ -61,7 +61,7 @@
   (if (= v :multiple) nil v))
 
 (mf/defc color-row
-  [{:keys [index color disable-gradient disable-opacity on-change on-reorder on-detach on-open on-close title on-remove disable-drag select-all on-blur]}]
+  [{:keys [index color disable-gradient disable-opacity on-change on-reorder on-detach on-open on-close title on-remove disable-drag select-all on-blur select-only]}]
   (let [current-file-id (mf/use-ctx ctx/current-file-id)
         file-colors     (mf/deref refs/workspace-file-colors)
         shared-libs     (mf/deref refs/workspace-libraries)
@@ -93,6 +93,9 @@
 
         handle-pick-color (fn [color]
                             (when on-change (on-change (merge uc/empty-color color))))
+        
+        handle-select (fn []
+                        (select-only color))
 
         handle-open (fn [] (when on-open (on-open)))
 
@@ -157,7 +160,11 @@
            {:on-mouse-enter #(reset! hover-detach true)
             :on-mouse-leave #(reset! hover-detach false)
             :on-click detach-value}
-           (if @hover-detach i/unchain i/chain)])]
+           (if @hover-detach i/unchain i/chain)])
+
+        (when select-only
+          [:div.element-set-actions-button {:on-click handle-select}
+           i/pointer-inner])]
 
        ;; Rendering a gradient
        (and (not (uc/multiple? color))
@@ -188,7 +195,10 @@
                               :on-blur on-blur
                               :on-change handle-opacity-change
                               :min 0
-                              :max 100}]])])
+                              :max 100}]])
+        (when select-only
+          [:div.element-set-actions-button {:on-click handle-select}
+           i/pointer-inner])])
      (when (some? on-remove)
        [:div.element-set-actions-button.remove {:on-click on-remove} i/minus])]))
 

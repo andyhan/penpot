@@ -8,6 +8,7 @@
   (:require
    [app.common.colors :as clr]
    [app.common.data :as d]
+   [app.common.pages.helpers :as cph]
    [app.main.data.modal :as md]
    [app.main.data.workspace.changes :as dch]
    [app.main.data.workspace.layout :as layout]
@@ -386,3 +387,13 @@
     (update [_ state]
       (-> state
           (assoc-in [:workspace-global :editing-stop] spot)))))
+
+(defn change-color-in-selected
+  [new-color shapes-by-color]
+  (ptk/reify ::change-color-in-selected
+    ptk/WatchEvent
+    (watch [_ _ _]
+      (->> (rx/from shapes-by-color)
+           (rx/map #(if (= :fill (:prop %))
+                      (change-fill [(:shape-id %)] new-color (:index %))
+                      (change-stroke [(:shape-id %)] new-color (:index %))))))))
