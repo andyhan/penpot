@@ -170,8 +170,13 @@
        (and (not (uc/multiple? color))
             (:gradient color)
             (get-in color [:gradient :type]))
-       [:div.color-info
-        [:div.color-name (cb/gradient-type->string (get-in color [:gradient :type]))]]
+       [:*
+        [:div.color-info
+         [:div.color-name (cb/gradient-type->string (get-in color [:gradient :type]))]]
+        (when select-only
+          [:div.element-set-actions-button {:on-click handle-select}
+           i/pointer-inner])]
+  
 
        ;; Rendering a plain color/opacity
        :else

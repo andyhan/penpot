@@ -25,10 +25,10 @@
 
 (defn fill->color-att
   [fill]
-  {:color-prop {:color (:fill-color fill)
-                :opacity (:fill-opacity fill)
-                :id (:fill-color-ref-id fill)
-                :file-id (:fill-color-ref-file fill)
+  {:color-prop {:color    (:fill-color fill)
+                :opacity  (:fill-opacity fill)
+                :id       (:fill-color-ref-id fill)
+                :file-id  (:fill-color-ref-file fill)
                 :gradient (:fill-color-gradient fill)}
    :prop :fill
    :shape-id (:shape-id fill)
@@ -36,10 +36,10 @@
 
 (defn stroke->color-att
   [stroke]
-  {:color-prop {:color (:stroke-color stroke)
-                :opacity (:stroke-opacity stroke)
-                :id (:stroke-color-ref-id stroke)
-                :file-id (:stroke-color-ref-file stroke)
+  {:color-prop {:color    (:stroke-color stroke)
+                :opacity  (:stroke-opacity stroke)
+                :id       (:stroke-color-ref-id stroke)
+                :file-id  (:stroke-color-ref-file stroke)
                 :gradient (:stroke-color-gradient stroke)}
    :prop :stroke
    :shape-id (:shape-id stroke)
@@ -48,10 +48,10 @@
 
 (defn text->color-att
   [fill]
-  {:color-prop {:color (:fill-color fill)
-                :opacity (:fill-opacity fill)
-                :id (:fill-color-ref-id fill)
-                :file-id (:fill-color-ref-file fill)
+  {:color-prop {:color    (:fill-color fill)
+                :opacity  (:fill-opacity fill)
+                :id       (:fill-color-ref-id fill)
+                :file-id  (:fill-color-ref-file fill)
                 :gradient (:fill-color-gradient fill)}
    :prop :content
    :shape-id (:shape-id fill)
@@ -104,6 +104,7 @@
                      (let [new-color event
                            shapes-by-color (get grouped-colors old-color)]
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color old-color)))))
+        
         on-detach (mf/use-callback
                    (mf/deps grouped-colors)
                    (fn [color]
@@ -111,6 +112,7 @@
                            new-color (-> color
                                          (assoc :id nil :file-id nil))]
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color color)))))
+        
         select-only (mf/use-callback
                      (mf/deps grouped-colors)
                      (fn [color]
@@ -118,7 +120,6 @@
                              ids (into (d/ordered-set)  (map :shape-id shapes-by-color))]
                          (st/emit! (dwc/select-shapes ids)))))]
     
-    ;; (.log js/console "grouped colors" (clj->js grouped-colors))
     (when (< 1 (count colors))
       [:div.element-set
        [:div.element-set-title

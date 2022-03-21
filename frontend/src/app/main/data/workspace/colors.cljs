@@ -392,7 +392,8 @@
   [color]
   {:fill-color (:color color)
    :fill-opacity (:opacity color)
-   :fill-color-ref-file (:fill-id color)
+   :fill-color-ref-id (:id color)
+   :fill-color-ref-file (:file-id color)
    :fill-color-gradient (:gradient color)})
 
 (defn change-text-color
@@ -401,14 +402,6 @@
         parsed-color (d/without-nils (color-att->text old-color))
         parsed-new-color (d/without-nils (color-att->text new-color))
         has-color? (d/index-of fills parsed-color)]
-    ;; (prn "old-color" parsed-color)
-    ;; (prn "new-color" parsed-new-color)
-    ;; (prn "index" index)
-    ;; (prn "node" node)
-    ;; (prn "count" (count (:fills node)))
-    ;; (assoc-in [:fills position] (into {} attrs))
-    (let [new-node (assoc-in node [:fills index] (color-att->text new-color))]
-      #_(prn "new-node" new-node))
     (cond-> node
       (some? has-color?)
       (assoc-in [:fills index] parsed-new-color))))
