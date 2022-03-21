@@ -97,6 +97,7 @@
         not-library-colors (get divided-colors false)
         expand-lib-color (mf/use-state false)
         expand-color (mf/use-state false)
+
         on-change (mf/use-callback
                    (mf/deps grouped-colors)
                    (fn [event old-color]
@@ -108,7 +109,7 @@
                    (fn [color]
                      (let [shapes-by-color (get grouped-colors color)
                            new-color (-> color
-                                     (assoc :id nil :file-id nil))]
+                                         (assoc :id nil :file-id nil))]
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color color)))))
         select-only (mf/use-callback
                      (mf/deps grouped-colors)
@@ -117,7 +118,7 @@
                              ids (into (d/ordered-set)  (map :shape-id shapes-by-color))]
                          (st/emit! (dwc/select-shapes ids)))))]
     
-    (.log js/console "grouped colors" (clj->js grouped-colors))
+    ;; (.log js/console "grouped colors" (clj->js grouped-colors))
     (when (< 1 (count colors))
       [:div.element-set
        [:div.element-set-title
