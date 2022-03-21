@@ -35,7 +35,7 @@
                            :shape shape
                            :attrs (conj text-fill-attrs :fills)})
                          (d/update-in-when [:fill-color-gradient :type] keyword))
-
+        _ (prn "cacota" fill-values)
         fill-values (if (not (contains? fill-values :fills))
                       ;; Old fill format
                       {:fills [fill-values]}
@@ -57,6 +57,7 @@
                       {:editor-state editor-state
                        :shape shape
                        :attrs text-attrs}))]
+    (prn fill-values)
 
     [:*
 

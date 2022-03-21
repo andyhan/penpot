@@ -54,25 +54,28 @@
                 :file-id (:fill-color-ref-file fill)
                 :gradient (:fill-color-gradient fill)}
    :prop :content
-   :shape-id (:parent-id fill)
+   :shape-id (:shape-id fill)
    :index (:index fill)})
+
+(defn treat-node
+  [node shape-id]
+  (map-indexed #(assoc %2 :shape-id shape-id :index %1) node))
+
+(defn extract-text-colors
+  [text]
+  (let [content (txt/node-seq txt/is-text-node? (:content text))
+        content-filtered (map :fills content)
+        indexed (mapcat #(treat-node % (:id text)) content-filtered)]
+    (map text->color-att indexed)))
 
 (defn get-colors-and-props-shape
   [list shape]
   (let [fill-obj   (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:fills shape))
-        ;; (if (= :text (:type shape))
-        ;;              (map-indexed (fn[el1 el2] assoc el2 :index el1)(map  #(assoc % :shape-id (:id shape))(txt/node-seq txt/is-text-node? (:content shape))))
-        ;;              (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:fills shape)))
-        stroke-obj (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:strokes shape))
-        ;; text-obj (map #(assoc % :parent-id (:id shape) :type :node) (txt/node-seq txt/is-text-node? (:content shape)))
-        ;; text-fill-obj (reduce (fn [element] map-indexed #(assoc %2 :shape-id (:parent-id element) :index %1) (:fills element)) text-obj)
-        
-        ]
+        stroke-obj (map-indexed #(assoc %2 :shape-id (:id shape) :index %1) (:strokes shape))]
     (if (= :text (:type shape))
-      ;; (as-> list $
-      ;;   (into $ (map stroke->color-att) stroke-obj)
-      ;;   (reduce get-colors-and-props-shape $ fill-obj))
-      list
+      (-> list
+          (into (map stroke->color-att) stroke-obj)
+          (into (extract-text-colors shape)))
 
       (-> list
           (into (map fill->color-att)  fill-obj)
@@ -96,23 +99,25 @@
         expand-color (mf/use-state false)
         on-change (mf/use-callback
                    (mf/deps grouped-colors)
-                   (fn [event color]
+                   (fn [event old-color]
                      (let [new-color event
-                           shapes-by-color (get grouped-colors color)]
-                       (st/emit! (dc/change-color-in-selected new-color shapes-by-color)))))
+                           shapes-by-color (get grouped-colors old-color)]
+                       (st/emit! (dc/change-color-in-selected new-color shapes-by-color old-color)))))
         on-detach (mf/use-callback
                    (mf/deps grouped-colors)
                    (fn [color]
                      (let [shapes-by-color (get grouped-colors color)
-                           color (-> color
+                           new-color (-> color
                                      (assoc :id nil :file-id nil))]
-                       (st/emit! (dc/change-color-in-selected color shapes-by-color)))))
+                       (st/emit! (dc/change-color-in-selected new-color shapes-by-color color)))))
         select-only (mf/use-callback
                      (mf/deps grouped-colors)
                      (fn [color]
                        (let [shapes-by-color (get grouped-colors color)
                              ids (into (d/ordered-set)  (map :shape-id shapes-by-color))]
                          (st/emit! (dwc/select-shapes ids)))))]
+    
+    (.log js/console "grouped colors" (clj->js grouped-colors))
     (when (< 1 (count colors))
       [:div.element-set
        [:div.element-set-title
