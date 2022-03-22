@@ -84,8 +84,9 @@
 (mf/defc color-selection-menu
   {::mf/wrap [#(mf/memo' % (mf/check-props ["shapes"]))]}
   [{:keys [type shapes] :as props}]
-  (let [data (reduce get-colors-and-props-shape [] shapes)
-        grouped-colors (group-by :color-prop data)
+  (let [
+        data (reduce get-colors-and-props-shape [] shapes)
+        grouped-colors (mf/use-state (group-by :color-prop data))
 
         colors (-> (mapv :color-prop data)
                    distinct)
@@ -100,15 +101,23 @@
                    (mf/deps grouped-colors)
                    (fn [event old-color]
                      (let [new-color event
-                           shapes-by-color (get grouped-colors old-color)
+                           shapes-by-color (get @grouped-colors old-color)
                            _ (println "old-color" old-color)
-                           _ (println (get grouped-colors (dissoc old-color :position)))]
+                           _ (println "new-color" new-color)
+                           _ (println "grouped-colors" @grouped-colors)]
+
+
+                       (println "xxxxxxxxx1" @grouped-colors)
+                       (println "xxxxxxxxx2" (clojure.set/rename-keys @grouped-colors {old-color new-color}))
+
+                       (reset! grouped-colors (clojure.set/rename-keys @grouped-colors {old-color new-color}))
+                       (println "xxxxxxxxx" (clojure.set/rename-keys @grouped-colors {old-color new-color}))
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color old-color)))))
 
         on-detach (mf/use-callback
                    (mf/deps grouped-colors)
                    (fn [color]
-                     (let [shapes-by-color (get grouped-colors color)
+                     (let [shapes-by-color (get @grouped-colors color)
                            new-color (-> color
                                          (assoc :id nil :file-id nil))]
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color color)))))
@@ -116,10 +125,10 @@
         select-only (mf/use-callback
                      (mf/deps grouped-colors)
                      (fn [color]
-                       (let [shapes-by-color (get grouped-colors color)
+                       (let [shapes-by-color (get @grouped-colors color)
                              ids (into (d/ordered-set)  (map :shape-id shapes-by-color))]
                          (st/emit! (dwc/select-shapes ids)))))]
-
+    
     (when (< 1 (count colors))
       [:div.element-set
        [:div.element-set-title
