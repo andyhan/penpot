@@ -81,17 +81,15 @@
           (into (map fill->color-att)  fill-obj)
           (into (map stroke->color-att) stroke-obj)))))
 
-(defn get-colors-and-props-shapes
-  [shapes]
-  (let [data (reduce get-colors-and-props-shape [] shapes)]
-    (group-by :color-prop data)))
-
-
 (mf/defc color-selection-menu
   {::mf/wrap [#(mf/memo' % (mf/check-props ["shapes"]))]}
   [{:keys [type shapes] :as props}]
-  (let [grouped-colors (get-colors-and-props-shapes shapes)
-        colors (keys grouped-colors)
+  (let [data (reduce get-colors-and-props-shape [] shapes)
+        grouped-colors (group-by :color-prop data)
+
+        colors (-> (mapv :color-prop data)
+                   distinct)
+
         divided-colors (group-by #(some? (:id %)) colors)
         library-colors (get divided-colors true)
         not-library-colors (get divided-colors false)
@@ -102,9 +100,11 @@
                    (mf/deps grouped-colors)
                    (fn [event old-color]
                      (let [new-color event
-                           shapes-by-color (get grouped-colors old-color)]
+                           shapes-by-color (get grouped-colors old-color)
+                           _ (println "old-color" old-color)
+                           _ (println (get grouped-colors (dissoc old-color :position)))]
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color old-color)))))
-        
+
         on-detach (mf/use-callback
                    (mf/deps grouped-colors)
                    (fn [color]
@@ -112,14 +112,14 @@
                            new-color (-> color
                                          (assoc :id nil :file-id nil))]
                        (st/emit! (dc/change-color-in-selected new-color shapes-by-color color)))))
-        
+
         select-only (mf/use-callback
                      (mf/deps grouped-colors)
                      (fn [color]
                        (let [shapes-by-color (get grouped-colors color)
                              ids (into (d/ordered-set)  (map :shape-id shapes-by-color))]
                          (st/emit! (dwc/select-shapes ids)))))]
-    
+
     (when (< 1 (count colors))
       [:div.element-set
        [:div.element-set-title
